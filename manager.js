@@ -1,26 +1,8 @@
-// Copyright (c) 2012 The Chromium Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 if (!chrome.cookies) {
   chrome.cookies = chrome.experimental.cookies;
 }
 
-// A simple Timer class.
-function Timer() {
-  this.start_ = new Date();
-
-  this.elapsed = function() {
-    return (new Date()) - this.start_;
-  }
-
-  this.reset = function() {
-    this.start_ = new Date();
-  }
-}
-
-// Compares cookies for "key" (name, domain, etc.) equality, but not "value"
-// equality.
+// Compares cookies for "key" (name, domain, etc.) equality, but not "value" equality.
 function cookieMatch(c1, c2) {
   return (c1.name == c2.name) && (c1.domain == c2.domain) &&
          (c1.hostOnly == c2.hostOnly) && (c1.path == c2.path) &&
@@ -31,20 +13,18 @@ function cookieMatch(c1, c2) {
 // Returns an array of sorted keys from an associative array.
 function sortedKeys(array) {
   var keys = [];
-  for (var i in array) {
+  for (let i in array) {
     keys.push(i);
   }
   keys.sort();
   return keys;
 }
 
-// Shorthand for document.querySelector.
 function select(selector) {
   return document.querySelector(selector);
 }
 
-// An object used for caching data about the browser's cookies, which we update
-// as notifications come in.
+// An object used for caching data about the browser's cookies, which we update as notifications come in.
 function CookieCache() {
   this.cookies_ = {};
 
@@ -80,9 +60,9 @@ function CookieCache() {
   // Returns a sorted list of cookie domains that match |filter|. If |filter| is
   //  null, returns all domains.
   this.getDomains = function(filter) {
-    var result = [];
-    sortedKeys(this.cookies_).forEach(function(domain) {
-      if (!filter || domain.indexOf(filter) != -1) {
+    const result = [];
+    sortedKeys(this.cookies_).forEach((domain) => {
+      if (!filter || domain.indexOf(filter) !== -1) {
         result.push(domain);
       }
     });
@@ -94,35 +74,29 @@ function CookieCache() {
   };
 }
 
-
 var cache = new CookieCache();
 
-
 function removeAllForFilter() {
-  var filter = select("#filter").value;
-  var timer = new Timer();
+  const filter = select("#filter").value;
   cache.getDomains(filter).forEach(function(domain) {
     removeCookiesForDomain(domain);
   });
 }
 
 function removeAll() {
-  var all_cookies = [];
+  const all_cookies = [];
   cache.getDomains().forEach(function(domain) {
     if (!whitelistKeywords.find((w) => domain.includes(w))) {
-      console.log(domain);
       cache.getCookies(domain).forEach(function(cookie) {
         all_cookies.push(cookie);
       });
     }
   });
-  cache.reset();
-  var count = all_cookies.length;
-  var timer = new Timer();
-  for (var i = 0; i < count; i++) {
+  const count = all_cookies.length;
+  for (let i = 0; i < count; i++) {
     removeCookie(all_cookies[i]);
   }
-  timer.reset();
+  // cache.reset();
   // chrome.cookies.getAll({}, function(cookies) {
   //   for (var i in cookies) {
   //     cache.add(cookies[i]);
@@ -132,26 +106,24 @@ function removeAll() {
 }
 
 function removeCookie(cookie) {
-  var url = "http" + (cookie.secure ? "s" : "") + "://" + cookie.domain +
-            cookie.path;
-  chrome.cookies.remove({"url": url, "name": cookie.name});
+  const url = "http" + (cookie.secure ? "s" : "") + "://" + cookie.domain + cookie.path;
+  chrome.cookies.remove({ url, name: cookie.name });
 }
 
 function removeCookiesForDomain(domain) {
-  var timer = new Timer();
-  cache.getCookies(domain).forEach(function(cookie) {
+  cache.getCookies(domain).forEach((cookie) => {
     removeCookie(cookie);
   });
 }
 
 function resetTable() {
-  var table = select("#cookies");
+  const table = select("#cookies");
   while (table.rows.length > 1) {
     table.deleteRow(table.rows.length - 1);
   }
 }
 
-var reload_scheduled = false;
+let reload_scheduled = false;
 
 function scheduleReloadCookieTable() {
   if (!reload_scheduled) {
@@ -163,40 +135,41 @@ function scheduleReloadCookieTable() {
 function reloadCookieTable() {
   reload_scheduled = false;
 
-  var filter = select("#filter").value;
-
-  var domains = cache.getDomains(filter);
+  const filter = select("#filter").value;
+  const domains = cache.getDomains(filter);
 
   select("#filter_count").innerText = domains.length;
   select("#total_count").innerText = cache.getDomains().length;
 
   select("#delete_all_button").innerHTML = "";
   if (domains.length) {
-    var button = document.createElement("button");
+    const button = document.createElement("button");
+    button.innerText = "Delete all " + domains.length;
+    button.className = "btn btn-danger";
     button.onclick = removeAllForFilter;
-    button.innerText = "delete all " + domains.length;
     select("#delete_all_button").appendChild(button);
   }
 
   resetTable();
-  var table = select("#cookies");
+  const table = select("#cookies");
 
   domains.forEach(function(domain) {
-    var cookies = cache.getCookies(domain);
-    var row = table.insertRow(-1);
+    const cookies = cache.getCookies(domain);
+    const row = table.insertRow(-1);
     row.insertCell(-1).innerText = domain;
-    var cell = row.insertCell(-1);
+    let cell = row.insertCell(-1);
     cell.innerText = cookies.length;
     cell.setAttribute("class", "cookie_count");
 
-    var button = document.createElement("button");
-    button.innerText = "delete";
-    button.onclick = (function(dom){
+    const button = document.createElement("button");
+    button.innerText = "Delete";
+    button.className = "btn btn-danger btn-sm";
+    button.onclick = (function(dom) {
       return function() {
         removeCookiesForDomain(dom);
       };
     }(domain));
-    var cell = row.insertCell(-1);
+    cell = row.insertCell(-1);
     cell.appendChild(button);
     cell.setAttribute("class", "button");
   });
@@ -240,14 +213,12 @@ function stopListening() {
 
 function onload() {
   focusFilter();
-  var timer = new Timer();
   chrome.cookies.getAll({}, function(cookies) {
     startListening();
     start = new Date();
-    for (var i in cookies) {
+    for (let i in cookies) {
       cache.add(cookies[i]);
     }
-    timer.reset();
     reloadCookieTable();
   });
 }
@@ -256,8 +227,6 @@ document.addEventListener('DOMContentLoaded', function() {
   onload();
   document.body.addEventListener('click', focusFilter);
   document.querySelector('#remove_button').addEventListener('click', removeAll);
-  document.querySelector('#filter_div input').addEventListener(
-      'input', reloadCookieTable);
-  document.querySelector('#filter_div button').addEventListener(
-      'click', resetFilter);
+  document.querySelector('#filter_div input').addEventListener('input', reloadCookieTable);
+  document.querySelector('#filter_div button').addEventListener('click', resetFilter);
 });
